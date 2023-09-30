@@ -1,0 +1,67 @@
+---
+title: "Web Scraping"
+author: "Maria Shaikh"
+date: "2023-05-15"
+output: pdf_document
+---
+
+```{r}
+library(RSelenium)
+library(rvest)
+library(lubridate)
+```
+
+```{r}
+# Define a vector of game names
+game_names <- c( "311210/Call_of_Duty_Black_Ops_III/", "1687950/Persona_5_Royal/", "730/CounterStrike_Global_Offensive/")
+```
+
+```{r}
+# Create a for loop to iterate over each game name
+for (game_name in game_names) {
+  rd <- rsDriver(port = 9890L, browser = c("firefox"), chromever = NULL)
+  remDr <- rd[["client"]]
+  url <- paste0("https://store.steampowered.com/app/", game_name, "/")
+  remDr$navigate(url)
+  
+  # Scrolling the page to the bottom
+  webElem <- remDr$findElement("css", "body")
+  webElem$sendKeysToElement(list(key = "end"))
+  
+  # Adding buffer time to wait for comments to load
+  Sys.sleep(15) # Adjust the sleep time as needed (in seconds)
+  
+  # Find the review boxes under "most helpful reviews" and "recently posted"
+  webElem <- remDr$findElements("class", "review_box")
+  length(webElem) # there are 20 comments
+  
+  # Create a list of comments and dates
+  comments_list <- list()
+  dates_list <- list()
+  for (i in 1:length(webElem)) {
+    webElem1 <- webElem[[i]]$findChildElement("class", "content") # find each comment
+    webElem2 <- webElem[[i]]$findChildElement("class", "postedDate") # find each comment date
+    comment_text <- webElem1$getElementText()
+    comment_date <- webElem2$getElementText()
+    comments_list <- c(comments_list, comment_text) # scrape the comment
+    dates_list <- c(dates_list, comment_date) # scrape the comment date
+  }
+  
+  # Combine comments and dates into a data frame
+  comments_df <- data.frame(Comment = unlist(comments_list), Date = unlist(dates_list))
+  
+  # Generate unique filename for each game
+  csv_filename <- paste0("comments_", gsub("/", "_", game_name), ".csv")
+  
+  # Save comments to a CSV file with both comment and date
+  write.csv(comments_df, csv_filename, row.names = FALSE)
+  
+  # Close the browser and R session
+  remDr$close()
+  rd$server$stop()
+}
+
+
+
+```
+
