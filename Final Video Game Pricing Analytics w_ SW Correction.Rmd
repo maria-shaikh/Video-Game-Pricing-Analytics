@@ -1,0 +1,710 @@
+---
+title: "Video Game Pricing Analytics"
+author: "Shivi Deveshwar"
+date: "2023-04-15"
+output: pdf_document
+---
+
+```{r}
+# Import libraries
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(tidytext)
+library(tidyr)
+library(syuzhet)
+library(textdata)
+library(sentimentr)
+library(caret)
+library(plotly)
+library(readxl)
+library(tm)
+library(stopwords)
+```
+
+Date and Price Dataframe for CS:GO
+
+```{r}
+library(lubridate)
+#CSGO
+df_price_GO <- read_excel("CounterStrikePrices.xlsx")
+df_price_GO$Date <- as.Date(df_price_GO$Date, format = "%B %d, %Y")
+
+dates_GO <- seq(from = ymd("2014-01-01"), to = ymd("2023-12-31"), by = "day")
+df_dates_GO <- data.frame(Date = dates_GO)
+library(dplyr)
+
+df_merged_GO <- left_join(df_dates_GO, df_price_GO, by = "Date")
+df_filled_GO <- df_merged_GO %>%
+  fill(Price)
+
+#P5
+df_price_P5 <- read_excel("P5R Price.xlsx")
+df_price_P5$Date <- as.Date(df_price_P5$Date)
+
+dates_P5 <- seq(from = ymd("2014-01-01"), to = ymd("2023-12-31"), by = "day")
+df_dates_P5 <- data.frame(Date = dates_P5)
+
+df_merged_P5 <- left_join(df_dates_P5, df_price_P5, by = "Date")
+df_filled_P5 <- df_merged_P5 %>%
+  fill(Price)
+
+#BO3
+df_price_BO3 <- read_excel("COD_Black Ops3_Prices.xlsx")
+df_price_BO3$Date <- as.Date(df_price_BO3$Date)
+
+dates_BO3 <- seq(from = ymd("2014-01-01"), to = ymd("2023-12-31"), by = "day")
+df_dates_BO3 <- data.frame(Date = dates_BO3)
+
+df_merged_BO3 <- left_join(df_dates_BO3, df_price_BO3, by = "Date")
+df_filled_BO3 <- df_merged_BO3 %>%
+  fill(Price)
+
+```
+
+```{r}
+#CSGO
+# Read in the CSV file
+df_GO <- read.csv("Review Clean 1.csv")
+# Convert the date column to the desired format
+df_GO <- df_GO %>% 
+  mutate(df_GO$Date <- ifelse(grepl(",", df_GO$Date), 
+                              format(as.Date(df_GO$Date, "%B %d, %Y"), "%Y-%m-%d"),
+                              format(as.Date(df_GO$Date, "%d-%b-%y"), "%Y-%m-%d")))
+
+df_GO <- df_GO %>% filter(!is.na(df_GO$`df_GO$Date <- ...`))
+# Write the modified data frame back to a CSV file
+write.csv(df_GO, "CSGO.csv", row.names = FALSE)
+
+#P5
+df_P5 <- read.csv("Persona 5 100 reviews.csv")
+
+df_P5 <- df_P5 %>% 
+  mutate(df_P5$Date <- ifelse(grepl(",", df_P5$Date), 
+                              format(as.Date(df_P5$Date, "%B %d, %Y"), "%Y-%m-%d"),
+                              format(as.Date(df_P5$Date, "%d-%b-%y"), "%Y-%m-%d")))
+
+df_P5 <- df_P5 %>% filter(!is.na(df_P5$`df_P5$Date <- ...`))
+
+write.csv(df_P5, "P5.csv", row.names = FALSE)
+
+#BO3
+df_BO3 <- read.csv("COD_Black Ops3 Reviews.csv")
+
+df_BO3 <- df_BO3 %>% 
+  mutate(df_BO3$Date <- ifelse(grepl(",", df_BO3$Date), 
+                              format(as.Date(df_BO3$Date, "%B %d, %Y"), "%Y-%m-%d"),
+                              format(as.Date(df_BO3$Date, "%d-%b-%y"), "%Y-%m-%d")))
+
+df_BO3 <- df_BO3 %>% filter(!is.na(df_BO3$`df_BO3$Date <- ...`))
+
+write.csv(df_BO3, "BO3.csv", row.names = FALSE)
+```
+
+```{r}
+#CSGO
+df_filled_GO <- df_filled_GO %>% 
+  rename(date_column = Date)
+
+df_GO <- df_GO %>% 
+  rename(date_column = `df_GO$Date <- ...`)
+
+#P5
+df_filled_P5 <- df_filled_P5 %>% 
+  rename(date_column = Date)
+
+df_P5 <- df_P5 %>% 
+  rename(date_column = `df_P5$Date <- ...`)
+
+#BO3
+df_filled_BO3 <- df_filled_BO3 %>% 
+  rename(date_column = Date)
+
+df_BO3 <- df_BO3 %>% 
+  rename(date_column = `df_BO3$Date <- ...`)
+```
+
+```{r}
+#CSGO
+df_GO <- df_GO %>% 
+  mutate(date_column = as.Date(date_column, format = "%Y-%m-%d"))
+
+joined_df_GO <- inner_join(df_filled_GO, df_GO, by = "date_column")
+joined_df_GO$game_name <- c("CSGO")
+joined_df_GO <- joined_df_GO[complete.cases(joined_df_GO),]
+
+#P5
+df_P5 <- df_P5 %>% 
+  mutate(date_column = as.Date(date_column, format = "%Y-%m-%d"))
+
+joined_df_P5 <- inner_join(df_filled_P5, df_P5, by = "date_column")
+joined_df_P5$game_name <- c("Persona 5")
+joined_df_P5 <- joined_df_P5[complete.cases(joined_df_P5),]
+
+#BO3
+df_BO3 <- df_BO3 %>% 
+  mutate(date_column = as.Date(date_column, format = "%Y-%m-%d"))
+
+joined_df_BO3 <- inner_join(df_filled_BO3, df_BO3, by = "date_column")
+joined_df_BO3$game_name <- c("Black Ops 3")
+joined_df_BO3 <- joined_df_BO3[complete.cases(joined_df_BO3),]
+```
+
+
+
+```{r}
+# Prompt the user to choose a data frame
+choice <- readline(prompt = "What game would you like to Check? 1. CSGO, 2. Persona 5, 3. Black Ops 3: ")
+
+# Convert the user's input to numeric
+choice <- as.numeric(choice)
+
+# Check if the input is valid
+if (choice %in% c(1, 2, 3)) {
+  # Based on the user's choice, assign the selected data frame to a new variable
+  selected_df <- switch(choice, joined_df_GO, joined_df_P5, joined_df_BO3)
+  
+} else {
+  # If the input is not valid, display an error message
+  cat("Invalid choice. Please choose a valid option (1, 2, or 3).")
+}
+```
+
+Cleaning the data
+```{r}
+# Clean the selected dataframe
+selected_df$X <- str_to_lower(selected_df$X)  # Convert reviews to lowercase
+selected_df$X <- str_replace_all(selected_df$X, "[[:punct:]]", "")  # Remove punctuation from reviews
+selected_df$X <- str_replace_all(selected_df$X, "[^[:alnum:] ]", " ")
+selected_df$X <- str_replace_all(selected_df$X, "https?://\\S+\\s?", " ")
+selected_df$X <- str_replace_all(selected_df$X, "persona", " ")
+selected_df$X <- str_replace_all(selected_df$X, "royal", " ")
+selected_df$X <- str_replace_all(selected_df$X, "just", " ")
+selected_df$X <- str_replace_all(selected_df$X, "can", " ")
+selected_df$X <- str_replace_all(selected_df$X, "get", " ")
+cleaned_df <- selected_df[, -c(3,4,5)]
+```
+
+```{r}
+cleaned_df$X <- as.character(cleaned_df$X)
+
+extra_stopwords <- stopwords("en")
+extra_stopwords <- stopwords()
+#extra_stopwords <- tidytext::stop_words$word
+# 
+reviewvector <- as.vector(cleaned_df$X);    # Create vector
+reviewsource <- VectorSource(reviewvector); # Create source
+reviewcorpus <- Corpus(reviewsource);       # Create corpus
+
+reviewcorpus <- tm_map(reviewcorpus,content_transformer(stripWhitespace));
+reviewcorpus <- tm_map(reviewcorpus,content_transformer(tolower));
+reviewcorpus <- tm_map(reviewcorpus, content_transformer(removeWords),stopwords("english"));
+reviewcorpus <- tm_map(reviewcorpus,content_transformer(removePunctuation));
+reviewcorpus <- tm_map(reviewcorpus,content_transformer(removeNumbers));
+reviewcorpus <- tm_map(reviewcorpus, removeWords, extra_stopwords)
+
+removeNumPunct <- function(x) gsub("[^[:alpha:][:space:]]*", "", x)
+reviewcorpus <- tm_map(reviewcorpus, content_transformer(removeNumPunct))
+
+removeURL <- function(x) gsub("http[[:alnum:]]*", "", x)
+reviewcorpus <- tm_map(reviewcorpus, content_transformer(removeURL))
+```
+
+Stemming
+```{r}
+# keep a copy of corpus to use later as a dictionary for stem completion
+CorpusCopy <- reviewcorpus
+# stem words
+reviewcorpus <- tm_map(reviewcorpus, content_transformer(stemDocument))
+inspect(reviewcorpus[11:25])
+#
+# stem completion
+stemCompletion2 <- function(x, dictionary) {
+  x <- unlist(strsplit(as.character(x), " "))
+  # Unexpectedly, stemCompletion completes an empty string to
+  # a word in dictionary. Remove empty string to avoid above issue.
+  x <- x[x != ""]
+  x <- stemCompletion(x, dictionary=dictionary)
+  x <- paste(x, sep="", collapse=" ")
+  PlainTextDocument(stripWhitespace(x))
+}
+
+reviewcorpus <- lapply(reviewcorpus, stemCompletion2, dictionary=CorpusCopy)
+temp <- as.matrix(lapply(reviewcorpus, `[[`, 1))
+temp <- data.frame(temp)
+reviewcorpus <- Corpus(VectorSource(temp$temp))
+
+```
+
+
+
+```{r}
+dtm <- DocumentTermMatrix(reviewcorpus)
+
+#Get word frequencies
+
+word_freq <- colSums(as.matrix(dtm))
+
+#Sort word frequencies in descending order
+
+sorted_word_freq <- sort(word_freq, decreasing = TRUE)
+
+#Get top 10 most frequent words
+sorted_word_freq <- as.data.frame(sorted_word_freq)
+frequency_df <- data.frame(word = rownames(sorted_word_freq), n = sorted_word_freq[,1])
+
+#Create bar plot of highest word frequencies
+
+# Create bar chart of most frequent words
+frequent_chart <- frequency_df[1:10,] %>%
+ggplot(aes(x = reorder(word, n), y = n)) +
+  geom_bar(fill = "#ff7f0e", stat = "identity") +
+  labs(x = "", y = "Frequency") +
+  ggtitle("Most Frequent Words in Reviews") +
+  theme(plot.title = element_text(size = 16, color = "#333333"),
+        plot.background = element_rect(fill = "#FFFFFF"),
+        panel.background = element_rect(fill = "#FFFFFF"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(color = "black"),
+        axis.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"))
+
+frequent_chart
+```
+
+## Topic Modeling
+
+```{r}
+# Load the required packages
+library(tidytext)
+library(topicmodels)
+
+# Fit LDA model
+lda_model <- LDA(dtm, k = 3, control = list(seed = 1234))
+
+# Extract topics and top words
+lda_topics <- tidy(lda_model, matrix = "beta")
+top_words <- lda_topics %>%
+  group_by(topic) %>%
+  top_n(5, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+# Print the top words for each topic
+top_words
+
+# Visualize the topics
+ggplot(top_words, aes(x = reorder(term, beta), y = beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~topic, ncol = 3, scales = "free") +
+  coord_flip() +
+  labs(x = "", y = "Topic probability", title = "LDA Topics for Game Reviews") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
+  theme_classic() +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+```
+
+```{r}
+# Split the data into training and testing sets using the first 70% of years for training and the remaining 30% of years for testing
+train <- NULL
+test <- NULL
+#train <- sample(nrow(cleaned_df), 0.7 * nrow(cleaned_df))
+#test_indices <- sample(nrow(cleaned_df), round(0.3 * nrow(cleaned_df)))
+if (selected_df$game_name[1] %in% joined_df_GO$game_name[1]) {
+  train <- c(train, 1:58)
+  test <- c(test, 59:83)
+} else if (selected_df$game_name[1] %in% joined_df_P5$game_name[1]) {
+  train <- c(train, 1:55)
+  test <- c(test, 56:79)
+} else if (selected_df$game_name[1] %in% joined_df_BO3$game_name[1]) {
+  train <- c(train, 1:64)
+  test <- c(test, 65:92)
+}
+
+dfTrain <- cleaned_df[train,]
+dfTest <- cleaned_df[test,]
+```
+
+```{r}
+nrow(dfTrain)
+nrow(dfTest)
+```
+
+```{r}
+# Perform sentiment analysis using the "syuzhet" method
+syuzhet_vector <- get_sentiment(cleaned_df$X, method = "syuzhet")
+summary(syuzhet_vector)
+
+# Perform sentiment analysis using the "bing" method
+bing_vector <- get_sentiment(cleaned_df$X, method = "bing")
+summary(bing_vector)
+
+# Perform sentiment analysis using the "afinn" method
+afinn_vector <- get_sentiment(cleaned_df$X, method = "afinn")
+summary(afinn_vector)
+
+game_sentiment_scores <- data.frame(
+  game_name = cleaned_df$game_name,
+  syuzhet_vector,
+  bing_vector,
+  afinn_vector
+)
+```
+
+```{r}
+# Convert the sentiment scores from wide to long format
+game_data_sentiments <- game_sentiment_scores %>%
+  pivot_longer(cols = c(syuzhet_vector, bing_vector, afinn_vector), names_to = "method", values_to = "sentiment")
+
+# Summarize the sentiment scores by game and method
+game_sentiments_summary <- game_data_sentiments %>%
+  group_by(game_name, method) %>%
+  summarise(mean_sentiment = mean(sentiment))
+
+# Create a facet bar plot of mean sentiment scores by game and method
+ggplot(game_sentiments_summary, aes(x = game_name, y = mean_sentiment, fill = method)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "", y = "Mean Sentiment Score") +
+  facet_wrap(~ method, scales = "free_y") +
+  ggtitle("Sentiment Analysis of Game Reviews") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(caret)
+
+
+syuzhet_df <- data.frame(syuzhet_vector)
+bing_df <- data.frame(bing_vector)
+afinn_df <- data.frame(afinn_vector)
+
+syuzhet_df$game_name <- cleaned_df$game_name
+bing_df$game_name <- cleaned_df$game_name
+afinn_df$game_name <- cleaned_df$game_name
+
+syuzhet_df$date_column <- cleaned_df$date_column
+bing_df$date_column <- cleaned_df$date_column
+afinn_df$date_column <- cleaned_df$date_column
+```
+
+## Using Afinn
+
+```{r}
+# Merge sentiment scores with train_data based on year, review, and game_name
+train_data <- inner_join(dfTrain, afinn_df, by = c("game_name", "date_column"))
+
+# Merge sentiment scores with test_data based on year, review, and game_name
+test_data <- inner_join(dfTest, afinn_df, by = c("game_name", "date_column"))
+```
+
+### Random Forest
+
+```{r}
+library(randomForest)
+
+train_data <- train_data[-c(3)]
+train_data <- train_data[complete.cases(train_data),]
+
+test_data <- test_data[-c(3)]
+test_data <- test_data[complete.cases(test_data),]
+
+rf_model <- randomForest(Price ~ date_column + afinn_vector, data = train_data)
+summary(rf_model)
+
+rf_predicted_prices <- predict(rf_model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = rf_predicted_prices, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+test_data$Predicted_rf <- rf_predicted_prices
+
+predicted_price = print(mean(rf_predicted_prices))
+actual_price = print(mean(test_data$Price))
+
+(RMSE_afinn <- mean((test_data$Price - rf_predicted_prices)^2))
+```
+
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_rf)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
+
+### Linear Regression 
+
+```{r}
+# Use sentiment scores to predict game price using linear regression
+model <- lm(Price ~ date_column + afinn_vector, data = train_data)
+summary(model)
+
+# Predict price based on sentiment score for each method
+predicted_prices_reg <- predict(model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = predicted_prices_reg, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+# Evaluate the performance of the model using cross-validation
+# rmse <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verboseIter = TRUE)
+# model_cv <- train(price ~ afinn_vector + bing_vector + syuzhet_vector, data = game_data_sentiments, method = "lm", trControl = rmse)
+# print(model_cv)
+
+test_data$Predicted_reg <- predicted_prices_reg
+
+predicted_price = print(mean(predicted_prices_reg))
+actual_price = print(mean(test_data$Price))
+(RMSE_afinn <- mean((test_data$Price - predicted_prices_reg)^2))
+```
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_reg)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
+
+## Using Bing
+
+```{r}
+# Merge sentiment scores with train_data based on year, review, and game_name
+train_data <- inner_join(dfTrain, bing_df, by = c("game_name", "date_column"))
+
+# Merge sentiment scores with test_data based on year, review, and game_name
+test_data <- inner_join(dfTest, bing_df, by = c("game_name", "date_column"))
+```
+
+### Random Forest
+
+```{r}
+library(randomForest)
+
+train_data <- train_data[-c(3)]
+train_data <- train_data[complete.cases(train_data),]
+
+test_data <- test_data[-c(3)]
+test_data <- test_data[complete.cases(test_data),]
+
+rf_model <- randomForest(Price ~ date_column + bing_vector, data = train_data)
+summary(rf_model)
+
+rf_predicted_prices <- predict(rf_model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = rf_predicted_prices, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+test_data$Predicted_rf <- rf_predicted_prices
+
+predicted_price = print(mean(rf_predicted_prices))
+actual_price = print(mean(test_data$Price))
+
+(RMSE_bing <- mean((test_data$Price - rf_predicted_prices)^2))
+```
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_rf)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
+
+### Linear Regression
+
+```{r}
+# Use sentiment scores to predict game price using linear regression
+model <- lm(Price ~ date_column + bing_vector, data = train_data)
+summary(model)
+
+# Predict price based on sentiment score for each method
+predicted_prices_reg <- predict(model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = predicted_prices_reg, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+# Evaluate the performance of the model using cross-validation
+# rmse <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verboseIter = TRUE)
+# model_cv <- train(price ~ afinn_vector + bing_vector + syuzhet_vector, data = game_data_sentiments, method = "lm", trControl = rmse)
+# print(model_cv)
+
+test_data$Predicted_reg <- predicted_prices_reg
+
+predicted_price = print(mean(predicted_prices_reg))
+actual_price = print(mean(test_data$Price))
+
+(RMSE_bing <- mean((test_data$Price - predicted_prices_reg)^2))
+```
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_reg)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
+
+## Using Syuzhet
+
+```{r}
+# Merge sentiment scores with train_data based on year, review, and game_name
+train_data <- inner_join(dfTrain, syuzhet_df, by = c("game_name", "date_column"))
+
+# Merge sentiment scores with test_data based on year, review, and game_name
+test_data <- inner_join(dfTest, syuzhet_df, by = c("game_name", "date_column"))
+```
+
+### Random Forest
+
+```{r}
+library(randomForest)
+
+train_data <- train_data[-c(3)]
+train_data <- train_data[complete.cases(train_data),]
+
+test_data <- test_data[-c(3)]
+test_data <- test_data[complete.cases(test_data),]
+
+rf_model <- randomForest(Price ~ date_column + syuzhet_vector, data = train_data)
+summary(rf_model)
+
+rf_predicted_prices <- predict(rf_model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = rf_predicted_prices, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+test_data$Predicted_rf <- rf_predicted_prices
+
+predicted_price = print(mean(rf_predicted_prices))
+actual_price = print(mean(test_data$Price))
+(RMSE_syuzhet <- mean((test_data$Price - rf_predicted_prices)^2))
+
+```
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_rf)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
+
+### Linear Regression
+
+```{r}
+# Use sentiment scores to predict game price using linear regression
+model <- lm(Price ~ date_column + syuzhet_vector, data = train_data)
+summary(model)
+
+# Predict price based on sentiment score for each method
+predicted_prices_reg <- predict(model, newdata = test_data)
+
+# Create a scatter plot of predicted vs. actual game price
+ggplot(test_data, aes(x = predicted_prices_reg, y = Price)) +
+  geom_point() +
+  labs(x = "Predicted Price", y = "Actual Price") +
+  ggtitle("Predicted vs. Actual Game Prices") +
+  theme(plot.title = element_text(size = 16, face = "bold"))
+
+# Evaluate the performance of the model using cross-validation
+# rmse <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verboseIter = TRUE)
+# model_cv <- train(price ~ afinn_vector + bing_vector + syuzhet_vector, data = game_data_sentiments, method = "lm", trControl = rmse)
+# print(model_cv)
+
+
+test_data$Predicted_reg <- predicted_prices_reg
+
+predicted_price = print(mean(predicted_prices_reg))
+actual_price = print(mean(test_data$Price))
+
+(RMSE_bing <- mean((test_data$Price - predicted_prices_reg)^2))
+```
+
+
+```{r}
+# Create data frames
+ggplot_train <- data.frame(dates = train_data$date_column, actual_prices = train_data$Price, predicted_prices = train_data$Price)
+ggplot_test <- data.frame(dates = test_data$date_column, actual_prices = test_data$Price, predicted_prices = test_data$Predicted_reg)
+combined_df <- rbind(ggplot_train, ggplot_test)
+
+
+# Create time series plot
+ggplot(data = combined_df) +
+  geom_line(aes(x = dates, y = predicted_prices, color = "lightblue")) +  
+  geom_line(aes(x = dates, y = actual_prices, color = "green")) +
+  labs(x = "Date", y = "Prices") + 
+  ggtitle("Predicted vs Actual Prices") +
+  scale_color_manual(values = c("lightblue", "green"), labels = c("Actual", "Predicted"))+
+  theme_classic()
+```
