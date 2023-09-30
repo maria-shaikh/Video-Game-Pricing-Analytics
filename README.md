@@ -2,7 +2,6 @@
 The primary focus of this project is to investigate the impact of customer sentiment on video game pricing. 
 
 ## Executive Summary
-
 The primary focus of this project is to investigate the impact of customer sentiment on video game
 pricing. Our analysis is based on a comprehensive dataset obtained from SteamDB, a prominent video
 game database, which includes information such as release dates, reviews, and prices. Leveraging
